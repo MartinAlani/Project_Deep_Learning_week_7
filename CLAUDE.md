@@ -31,3 +31,4 @@
 - [ ] Phase 4 — Transfer learning (try 2-3 pre-trained models, justify the choice)
 - [ ] Phase 5 — Flask app (multi-image upload, per-class probabilities) + TF Serving bonus, hosting
 - [ ] Phase 6 — PDF report, PPT presentation, test_images/ (5-10 images)
+- [ ] Before submission: delete this `CLAUDE.md` file (user request)
