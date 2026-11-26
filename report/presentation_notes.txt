@@ -1,7 +1,6 @@
 ================================================================================
  PRESENTATION NOTES — Image Classification with CNNs (CIFAR-10)
- Status: covers Phases 0-2 (data, custom CNN). Items marked [TO FILL] are
- completed once the corresponding notebook has been run.
+ Status: covers Phases 0-2 (data, custom CNN), with real results.
 ================================================================================
 
 --------------------------------------------------------------------------------
@@ -159,21 +158,38 @@ Callbacks:
 --------------------------------------------------------------------------------
 SLIDE 12 — Training results (custom CNN)
 --------------------------------------------------------------------------------
-- Epochs run before early stopping: [TO FILL]
-- Best epoch: [TO FILL]
-- Training time: [TO FILL] minutes on a T4 GPU
-- Validation accuracy: [TO FILL] %
-- Validation loss: [TO FILL]
+- Epochs run: 54 (early stopping triggered; max was 100)
+- Best epoch: 44 (weights restored from this epoch)
+- Training time: 14.0 minutes on a T4 GPU (~15 s per epoch)
+- Validation accuracy: 86.48 %
+- Validation loss: 0.4134
+- Learning rate reduced 5 times by ReduceLROnPlateau:
+  0.001 -> 0.0005 -> 0.00025 -> 0.000125 -> 0.0000625 -> 0.00003125
 
 Visual: learning curves (accuracy & loss, train vs validation)
         (notebook 02, section 7 / models/custom_cnn_learning_curves.png)
 
-How to read the curves:
-- Both curves improve together → the model is learning, not memorizing.
-- Train accuracy can be LOWER than validation accuracy: training images are
-  augmented (harder) and dropout is only active during training.
-- [TO FILL: describe what our curves actually show, e.g. where they flatten,
-  when the learning rate was reduced, gap between train and validation]
+What our curves show:
+- Both curves improve together: accuracy rises from ~25% to ~85%, loss
+  drops from ~2.0 to ~0.41 → the model is learning, not memorizing.
+- No overfitting: validation accuracy stays slightly ABOVE train accuracy
+  (86% vs 84%) and validation loss below train loss. Reason: training images
+  are augmented (harder) and dropout is only active during training.
+- Validation is noisy in the first ~20 epochs (large learning rate → big
+  jumps) and smooths out as ReduceLROnPlateau lowers the learning rate.
+- Both curves plateau around 85% after epoch ~40: early stopping stopped
+  training at epoch 54, saving 46 unnecessary epochs.
+
+Insight: train and validation are very close and both flatten, so the model
+is not overfitting but has reached its CAPACITY. To go further we need a
+larger model or prior knowledge from other images → motivation for transfer
+learning (Phase 4).
+
+Say: "The training and validation curves improve together and stay close,
+so the model doesn't overfit. Validation is noisy at first and smooths out
+as the learning rate is reduced. Both curves plateau around 85%, which
+suggests the model reached its capacity — a motivation for transfer
+learning."
 
 --------------------------------------------------------------------------------
 SLIDES 13+ — (to be added)
@@ -227,3 +243,13 @@ A: Augmentation makes training images harder and dropout is only active
 Q: Why batch size 64?
 A: A common trade-off: big enough to use the GPU efficiently and give
    stable gradients, small enough to fit in memory and generalize well.
+
+Q: How do you know the model is not overfitting?
+A: Validation accuracy and loss follow the training curves closely and never
+   get worse while training improves. Validation is even slightly better than
+   train, because train images are augmented and dropout is on.
+
+Q: Why did training stop at epoch 54 and not 100?
+A: Early stopping: validation loss had not improved for 10 epochs after the
+   best epoch (44), so training stopped and the weights of epoch 44 were
+   restored.

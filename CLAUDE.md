@@ -29,10 +29,10 @@
 ## Progress
 - [x] Phase 0 — Project structure, requirements.txt, README
 - [x] Phase 1 — `01_data_preprocessing.ipynb` (user ran it in Colab successfully, up to the augmentation cells)
-- [~] Phase 2 — `02_custom_cnn.ipynb` written & tested (552k params; Adam 1e-3, EarlyStopping patience 10, ReduceLROnPlateau, checkpoint). Waiting for the user to run it in Colab and report val accuracy ← **current**
-- [ ] Phase 3 — Evaluation (accuracy, precision, recall, F1, confusion matrix)
+- [x] Phase 2 — `02_custom_cnn.ipynb` run in Colab: val_acc 0.8648, val_loss 0.4134, best epoch 44/54 (early stop), 14.0 min on T4, 552k params. Saved to Drive: custom_cnn.keras, custom_cnn_history.json, custom_cnn_learning_curves.png
+- [ ] Phase 3 — Evaluation (accuracy, precision, recall, F1, confusion matrix) ← **next**
 - [ ] Phase 4 — Transfer learning (try 2-3 pre-trained models, justify the choice)
 - [ ] Phase 5 — Flask app (multi-image upload, per-class probabilities) + TF Serving bonus, hosting
 - [ ] Phase 6 — PDF report, PPT presentation, test_images/ (5-10 images)
-- [~] `report/presentation_notes.txt` — slide-by-slide speaker notes + Q&A, covers Phases 0-2; fill [TO FILL] with real results and extend after each phase
+- [~] `report/presentation_notes.txt` — slide-by-slide speaker notes + Q&A, covers Phases 0-2 with real results; extend after each phase
 - [ ] Before submission: delete this `CLAUDE.md` file (user request)
