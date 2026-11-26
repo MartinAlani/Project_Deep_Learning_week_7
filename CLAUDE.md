@@ -9,6 +9,8 @@
   `user.name` / `user.email` to match the author of the `Initial commit` (74d1b90). Do NOT add
   `Co-Authored-By` or `Claude-Session` trailers to commit messages.
 - Commit directly to `main` (user-approved workflow) and push so the user can open notebooks in Colab.
+- The repo is **private** until the project is finished (user request). Claude cannot change repo
+  settings through the proxy, so the user switches visibility in GitHub Settings themselves.
 - One notebook per phase in `notebooks/`, each with an "Open in Colab" badge; add each new
   notebook to the table in `README.md`.
 - Notebooks run in **Google Colab (T4 GPU)**, TensorFlow 2.21. The CIFAR-10 download host is
@@ -33,3 +35,4 @@
 - [ ] Phase 5 — Flask app (multi-image upload, per-class probabilities) + TF Serving bonus, hosting
 - [ ] Phase 6 — PDF report, PPT presentation, test_images/ (5-10 images)
 - [ ] Before submission: delete this `CLAUDE.md` file (user request)
+- [ ] Before submission: remind the user to make the repo **public** again (Settings → Danger Zone)
