@@ -1,0 +1,229 @@
+================================================================================
+ PRESENTATION NOTES — Image Classification with CNNs (CIFAR-10)
+ Status: covers Phases 0-2 (data, custom CNN). Items marked [TO FILL] are
+ completed once the corresponding notebook has been run.
+================================================================================
+
+--------------------------------------------------------------------------------
+SLIDE 1 — Title
+--------------------------------------------------------------------------------
+- Image Classification with Convolutional Neural Networks
+- Dataset: CIFAR-10 | Framework: TensorFlow / Keras
+- Name, Ironhack Data Science & ML bootcamp, week 7
+
+--------------------------------------------------------------------------------
+SLIDE 2 — Project goal & roadmap
+--------------------------------------------------------------------------------
+Goal: build a model that looks at a small colour image and tells which of
+10 classes it belongs to, then deploy it as a web app.
+
+Roadmap:
+  1. Data preprocessing
+  2. Custom CNN (architecture + training)
+  3. Evaluation (accuracy, precision, recall, F1, confusion matrix)
+  4. Transfer learning (pre-trained models)
+  5. Deployment (Flask app)
+
+Say: "I first built my own CNN from scratch, then compared it with
+pre-trained models, and deployed the best one."
+
+--------------------------------------------------------------------------------
+SLIDE 3 — Why CIFAR-10?
+--------------------------------------------------------------------------------
+- 60,000 colour images, 32x32 pixels, 10 classes:
+  airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck
+- Standard benchmark → results can be compared with the literature
+- Built into Keras → reproducible, no manual data cleaning
+- Small images → fast training on a free Colab GPU
+
+Visual: grid of sample images per class (notebook 01, section 4).
+
+--------------------------------------------------------------------------------
+SLIDE 4 — Data exploration
+--------------------------------------------------------------------------------
+- Each image = 32 x 32 x 3 numbers (height x width x RGB), values 0-255
+- Perfectly balanced: 5,000 training images per class
+  → accuracy is a reliable metric (no class dominates)
+- Challenge: very low resolution, and similar-looking classes
+  (cat vs dog, automobile vs truck) → expected sources of confusion
+
+Visual: class distribution bar chart (notebook 01, section 3).
+
+--------------------------------------------------------------------------------
+SLIDE 5 — Train / validation / test split
+--------------------------------------------------------------------------------
+| Set        | Size   | Purpose                                         |
+|------------|--------|-------------------------------------------------|
+| Train      | 45,000 | The model learns from it                        |
+| Validation |  5,000 | Monitor training, early stopping, model choice  |
+| Test       | 10,000 | Final, unbiased evaluation — used only once     |
+
+- Stratified split → exactly 500 images per class in validation
+- Fixed random seed (42) → reproducible, identical split for every model,
+  so all models are compared fairly
+
+Key message: "The test set is never used to make decisions during training;
+otherwise the final score would be over-optimistic (data leakage)."
+
+--------------------------------------------------------------------------------
+SLIDE 6 — Preprocessing
+--------------------------------------------------------------------------------
+1. Normalization: pixels rescaled from [0, 255] to [0, 1]
+   - Small input values → more stable, faster training
+   - Implemented as a Rescaling layer INSIDE the model, so the deployed app
+     can send raw images (no risk of forgetting to normalize in production)
+2. Efficient input pipeline with tf.data: shuffle, batches of 64, prefetch
+   (next batch is prepared while the GPU processes the current one)
+
+--------------------------------------------------------------------------------
+SLIDE 7 — Data augmentation
+--------------------------------------------------------------------------------
+Random transformations applied on the fly, only during training:
+- Horizontal flip (a mirrored car is still a car)
+- Random translation up to 10%
+- Random zoom up to 10%
+
+Why: the model sees slightly different images every epoch → learns general
+patterns instead of memorizing → less overfitting.
+Why NOT vertical flip: upside-down ships/horses don't exist in real photos.
+
+Visual: original image + 8 augmented versions (notebook 01, section 7).
+
+--------------------------------------------------------------------------------
+SLIDE 8 — What is a CNN?
+--------------------------------------------------------------------------------
+A CNN learns visual features hierarchically:
+  edges & colours → shapes & textures → object parts → whole object
+
+Three building blocks:
+- Convolution (Conv2D): small 3x3 filters slide over the image; each filter
+  learns to detect a pattern (edge, texture...) wherever it appears.
+- Pooling (MaxPooling2D): keeps the maximum of each 2x2 window → halves the
+  size, faster computation, robust to small shifts of features.
+- Fully connected (Dense): combines the detected features to decide the
+  class; the last layer uses softmax → 10 probabilities that sum to 100%.
+
+--------------------------------------------------------------------------------
+SLIDE 9 — My custom CNN architecture
+--------------------------------------------------------------------------------
+VGG-style network (stacked 3x3 convolutions):
+
+  Input 32x32x3 → Augmentation → Rescaling
+  Block 1: 2x Conv(32)  + BatchNorm + ReLU → MaxPool → Dropout 0.2 → 16x16x32
+  Block 2: 2x Conv(64)  + BatchNorm + ReLU → MaxPool → Dropout 0.3 →  8x8x64
+  Block 3: 2x Conv(128) + BatchNorm + ReLU → MaxPool → Dropout 0.4 →  4x4x128
+  Flatten (2,048) → Dense(128) + ReLU → Dropout 0.5 → Dense(10) + Softmax
+
+- Total parameters: 552,362 (small — VGG16 has 138 million)
+- Pattern: spatial size shrinks (32 → 4) while the number of filters grows
+  (32 → 128): fewer pixels, richer features.
+
+Visual: architecture diagram from plot_model (notebook 02, section 3).
+
+--------------------------------------------------------------------------------
+SLIDE 10 — Design choices (why each piece is there)
+--------------------------------------------------------------------------------
+- 3x3 kernels, two per block: same receptive field as a 5x5 filter with
+  fewer parameters (VGG idea)
+- padding="same": only pooling reduces the size → easy to follow shapes
+- Batch Normalization: keeps activations on a stable scale → faster, more
+  stable training
+- ReLU: simple non-linearity that lets the network learn complex patterns
+- Dropout increasing 0.2 → 0.5: randomly switches off neurons during
+  training so the network cannot rely on single neurons → reduces
+  overfitting; deeper layers have more parameters, so they get more dropout
+
+--------------------------------------------------------------------------------
+SLIDE 11 — Training setup
+--------------------------------------------------------------------------------
+| Hyper-parameter | Value                                             |
+|-----------------|---------------------------------------------------|
+| Optimizer       | Adam                                              |
+| Learning rate   | 0.001, halved on plateau (min 1e-5)               |
+| Loss            | Sparse categorical cross-entropy                  |
+| Batch size      | 64 (704 steps per epoch)                          |
+| Max epochs      | 100                                               |
+| Early stopping  | monitor val_loss, patience 10, restore best       |
+| Hardware        | Google Colab, NVIDIA T4 GPU                       |
+
+Why Adam: adapts the learning rate of every weight automatically and uses
+momentum → converges faster than plain SGD and needs less tuning.
+
+Callbacks:
+- EarlyStopping: stops when validation loss stops improving → prevents
+  overfitting and saves time; restores the weights of the best epoch.
+- ReduceLROnPlateau: halves the learning rate when validation loss stalls
+  for 4 epochs → smaller steps to fine-tune near the minimum.
+- ModelCheckpoint: saves the best model to Google Drive.
+
+--------------------------------------------------------------------------------
+SLIDE 12 — Training results (custom CNN)
+--------------------------------------------------------------------------------
+- Epochs run before early stopping: [TO FILL]
+- Best epoch: [TO FILL]
+- Training time: [TO FILL] minutes on a T4 GPU
+- Validation accuracy: [TO FILL] %
+- Validation loss: [TO FILL]
+
+Visual: learning curves (accuracy & loss, train vs validation)
+        (notebook 02, section 7 / models/custom_cnn_learning_curves.png)
+
+How to read the curves:
+- Both curves improve together → the model is learning, not memorizing.
+- Train accuracy can be LOWER than validation accuracy: training images are
+  augmented (harder) and dropout is only active during training.
+- [TO FILL: describe what our curves actually show, e.g. where they flatten,
+  when the learning rate was reduced, gap between train and validation]
+
+--------------------------------------------------------------------------------
+SLIDES 13+ — (to be added)
+--------------------------------------------------------------------------------
+- Phase 3: test-set evaluation, precision / recall / F1, confusion matrix
+- Phase 4: transfer learning — models tried, chosen model and why
+- Model comparison table and best model
+- Phase 5: Flask app demo
+- Insights & lessons learned, conclusion
+
+================================================================================
+ LIKELY QUESTIONS & ANSWERS (so far)
+================================================================================
+
+Q: Why do you need a validation set if you already have a test set?
+A: Training involves decisions (when to stop, which architecture, learning
+   rate). Making them on the test set would tune the model to the test set
+   and give an over-optimistic score. Validation is for decisions; test is
+   the final, unbiased exam.
+
+Q: What does a convolutional filter learn?
+A: A visual pattern (edge, colour, texture, shape). The same filter is
+   applied across the whole image, so it detects the pattern wherever it is.
+
+Q: Why pooling?
+A: It halves the spatial size (less computation) and makes the network
+   robust to small shifts of the detected features.
+
+Q: What does softmax do?
+A: Converts the 10 raw outputs of the last layer into probabilities that sum
+   to 1; the highest probability is the predicted class.
+
+Q: What is overfitting and how did you prevent it?
+A: When the model memorizes the training data instead of learning general
+   patterns: great on train, poor on new images. Prevented with data
+   augmentation, dropout, batch normalization and early stopping.
+
+Q: Why is normalization inside the model?
+A: So the deployed model accepts raw 0-255 images; preprocessing can't be
+   forgotten or done differently in production.
+
+Q: Why Adam instead of SGD?
+A: Adam adapts the step size for each weight and uses momentum, so it
+   converges faster and works well with the default learning rate. SGD can
+   sometimes reach slightly higher accuracy but needs much more tuning.
+
+Q: Why is train accuracy lower than validation accuracy?
+A: Augmentation makes training images harder and dropout is only active
+   during training; validation uses clean images and the full network.
+
+Q: Why batch size 64?
+A: A common trade-off: big enough to use the GPU efficiently and give
+   stable gradients, small enough to fit in memory and generalize well.
