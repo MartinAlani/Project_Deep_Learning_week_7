@@ -24,6 +24,7 @@
 - Dataset: CIFAR-10. Framework: TensorFlow/Keras (TF Serving bonus planned for deployment).
 - Normalization via `Rescaling(1/255)` **inside the model** (raw uint8 images in deployment).
 - Augmentation: RandomFlip("horizontal"), RandomTranslation(0.1, 0.1), RandomZoom(0.1).
+- Transfer learning: Resizing + model-specific scaling live inside the model (app sends raw 32x32 uint8). ResNet50V2 chosen over ResNet50 (simple [-1,1] scaling, no Lambda layer). VGG16 discarded (138M params, slow, big file).
 - `tf.data` pipeline, batch size 64, labels as integers (use sparse categorical cross-entropy).
 
 ## Progress
@@ -31,7 +32,7 @@
 - [x] Phase 1 — `01_data_preprocessing.ipynb` (user ran it in Colab successfully, up to the augmentation cells)
 - [x] Phase 2 — `02_custom_cnn.ipynb` run in Colab: val_acc 0.8648, val_loss 0.4134, best epoch 44/54 (early stop), 14.0 min on T4, 552k params. Saved to Drive: custom_cnn.keras, custom_cnn_history.json, custom_cnn_learning_curves.png
 - [x] Phase 3 — `03_evaluation.ipynb` run: test acc 0.8511 (val 0.8648), test macro P/R/F1 0.8531/0.8511/0.8507. Best F1: automobile .944, ship .928, truck .922; worst: cat .706, dog .780, bird .788. Top confusion dog<->cat (129+114). Insights: vehicles > animals, frog = fallback (high recall, low precision), background bias (ship/bird->airplane), label noise, overconfidence. Saved to Drive `results/`
-- [ ] Phase 4 — Transfer learning (try 2-3 pre-trained models, justify the choice) ← **next**
+- [~] Phase 4 — `04_transfer_learning.ipynb` written & tested: MobileNetV2 / ResNet50V2 / EfficientNetB0 frozen (IMG_SIZE 128, 10 epochs, lr 1e-3), best by val acc → fine-tune whole base except BatchNorm (lr 1e-5, 15 epochs). Mixed precision on GPU. RETRAIN=False skips models already on Drive. Saves tl_<name>_stage1/finetuned.keras + JSONs, transfer_learning_evaluation.json. Waiting for the user's results ← **current**
 - [ ] Phase 5 — Flask app (multi-image upload, per-class probabilities) + TF Serving bonus, hosting
 - [ ] Phase 6 — PDF report, PPT presentation, test_images/ (5-10 images)
 - [~] `report/presentation_notes.txt` — slide-by-slide speaker notes + Q&A, covers Phases 0-3 with real results (slides 1-17); extend after each phase
