@@ -30,9 +30,9 @@
 - [x] Phase 0 — Project structure, requirements.txt, README
 - [x] Phase 1 — `01_data_preprocessing.ipynb` (user ran it in Colab successfully, up to the augmentation cells)
 - [x] Phase 2 — `02_custom_cnn.ipynb` run in Colab: val_acc 0.8648, val_loss 0.4134, best epoch 44/54 (early stop), 14.0 min on T4, 552k params. Saved to Drive: custom_cnn.keras, custom_cnn_history.json, custom_cnn_learning_curves.png
-- [~] Phase 3 — `03_evaluation.ipynb` written & tested (loads custom_cnn.keras from Drive; saves figures + custom_cnn_evaluation.json to Drive `results/`). Waiting for the user to run it and share test acc, per-class report, confusion matrix ← **current**
-- [ ] Phase 4 — Transfer learning (try 2-3 pre-trained models, justify the choice)
+- [x] Phase 3 — `03_evaluation.ipynb` run: test acc 0.8511 (val 0.8648), test macro P/R/F1 0.8531/0.8511/0.8507. Best F1: automobile .944, ship .928, truck .922; worst: cat .706, dog .780, bird .788. Top confusion dog<->cat (129+114). Insights: vehicles > animals, frog = fallback (high recall, low precision), background bias (ship/bird->airplane), label noise, overconfidence. Saved to Drive `results/`
+- [ ] Phase 4 — Transfer learning (try 2-3 pre-trained models, justify the choice) ← **next**
 - [ ] Phase 5 — Flask app (multi-image upload, per-class probabilities) + TF Serving bonus, hosting
 - [ ] Phase 6 — PDF report, PPT presentation, test_images/ (5-10 images)
-- [~] `report/presentation_notes.txt` — slide-by-slide speaker notes + Q&A, covers Phases 0-2 with real results; extend after each phase
+- [~] `report/presentation_notes.txt` — slide-by-slide speaker notes + Q&A, covers Phases 0-3 with real results (slides 1-17); extend after each phase
 - [ ] Before submission: delete this `CLAUDE.md` file (user request)

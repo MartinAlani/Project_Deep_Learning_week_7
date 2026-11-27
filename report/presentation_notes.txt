@@ -1,6 +1,6 @@
 ================================================================================
  PRESENTATION NOTES — Image Classification with CNNs (CIFAR-10)
- Status: covers Phases 0-2 (data, custom CNN), with real results.
+ Status: covers Phases 0-3 (data, custom CNN, evaluation), with real results.
 ================================================================================
 
 --------------------------------------------------------------------------------
@@ -192,9 +192,98 @@ suggests the model reached its capacity — a motivation for transfer
 learning."
 
 --------------------------------------------------------------------------------
-SLIDES 13+ — (to be added)
+SLIDE 13 — Evaluation metrics (what we measure)
 --------------------------------------------------------------------------------
-- Phase 3: test-set evaluation, precision / recall / F1, confusion matrix
+- Accuracy: fraction of all images classified correctly (global score)
+- Precision: when the model predicts "cat", how often is it a cat? (reliability)
+- Recall: of all real cats, how many did the model find? (coverage)
+- F1-score: harmonic mean of precision and recall (balance, one number)
+- Confusion matrix: rows = true class, columns = predicted class;
+  diagonal = correct predictions, off-diagonal = errors
+
+Why not only accuracy: it hides how the model behaves on each class and
+what kind of mistakes it makes.
+
+--------------------------------------------------------------------------------
+SLIDE 14 — Test-set results (custom CNN)
+--------------------------------------------------------------------------------
+| Set        | Loss   | Accuracy |
+|------------|--------|----------|
+| Validation | 0.4134 | 86.48 %  |
+| Test       | 0.4638 | 85.11 %  |
+
+- Test macro precision: 85.31 % | macro recall: 85.11 % | macro F1: 85.07 %
+- Official score of the custom CNN: 85.1 % test accuracy
+
+Say: "The test score is only 1.4 points below validation. This small gap is
+expected, because validation was used for early stopping and learning-rate
+decisions; it shows the model generalizes well to unseen images."
+
+--------------------------------------------------------------------------------
+SLIDE 15 — Per-class performance
+--------------------------------------------------------------------------------
+| Class      | Precision | Recall | F1     |
+|------------|-----------|--------|--------|
+| automobile | 0.930     | 0.959  | 0.944  |
+| ship       | 0.943     | 0.914  | 0.928  |
+| truck      | 0.914     | 0.929  | 0.922  |
+| horse      | 0.934     | 0.859  | 0.895  |
+| airplane   | 0.860     | 0.881  | 0.871  |
+| frog       | 0.768     | 0.944  | 0.847  |
+| deer       | 0.875     | 0.781  | 0.825  |
+| bird       | 0.797     | 0.780  | 0.788  |
+| dog        | 0.790     | 0.771  | 0.780  |
+| cat        | 0.720     | 0.693  | 0.706  |
+
+Insights:
+- Vehicles are much easier than animals: average F1 ~91.6 % vs ~80.7 %.
+  Vehicles have rigid, distinctive shapes and typical backgrounds; animals
+  vary in pose, are furry/blurry at 32x32 and several look alike.
+- "frog" = high recall (94 %) but low precision (77 %): the model uses
+  "frog" as a fallback for small animals on natural green/brown backgrounds
+  (87 cats, 78 deer and 65 birds were predicted as frog).
+
+Visual: per-class bar chart (results/custom_cnn_metrics_per_class.png).
+
+--------------------------------------------------------------------------------
+SLIDE 16 — Confusion matrix
+--------------------------------------------------------------------------------
+Top confusions (true -> predicted):
+  dog -> cat 129 | cat -> dog 114 | cat -> frog 87 | deer -> frog 78
+  bird -> frog 65 | deer -> bird 58 | ship -> airplane 46
+  bird -> airplane 44 | truck -> automobile 41
+
+Insights:
+- Main weakness: cat <-> dog, 243 mutual errors — predicted during data
+  exploration. The confusion is symmetric: the model really cannot tell them
+  apart reliably at this resolution.
+- The model also relies on BACKGROUND: ships and birds are confused with
+  airplanes because of blue sky / sea.
+
+Visual: confusion matrix, counts + normalized
+        (results/custom_cnn_confusion_matrix.png).
+
+--------------------------------------------------------------------------------
+SLIDE 17 — Error analysis (what the mistakes look like)
+--------------------------------------------------------------------------------
+Looking at the most confident mistakes:
+1. Label noise: some "errors" are actually correct predictions with wrong
+   labels in the dataset (e.g. a green frog labelled "cat", toads labelled
+   "bird" / "deer"). No model can reach 100 % on CIFAR-10.
+2. Ambiguous class boundaries: pickups, vans and SUVs are confused between
+   "truck" and "automobile" — even humans would hesitate.
+3. Background bias: cruise ships with a lot of sky predicted as airplanes.
+4. Genuinely hard images: dark cat barely visible on a chair, dog in side
+   view on grass predicted as horse, white cat inside a boat-shaped bowl.
+5. Overconfidence: these mistakes were made with ~100 % confidence — softmax
+   probabilities do not always reflect real certainty (important to keep in
+   mind for the deployed app).
+
+Visual: grid of most confident mistakes (notebook 03, section 9).
+
+--------------------------------------------------------------------------------
+SLIDES 18+ — (to be added)
+--------------------------------------------------------------------------------
 - Phase 4: transfer learning — models tried, chosen model and why
 - Model comparison table and best model
 - Phase 5: Flask app demo
@@ -253,3 +342,28 @@ Q: Why did training stop at epoch 54 and not 100?
 A: Early stopping: validation loss had not improved for 10 epochs after the
    best epoch (44), so training stopped and the weights of epoch 44 were
    restored.
+
+Q: What is the difference between precision and recall?
+A: Precision: of everything predicted as a class, how much was right
+   (reliability). Recall: of all real images of a class, how many were found
+   (coverage). E.g. "frog" has high recall (finds 94 % of frogs) but lower
+   precision (predicts "frog" too often).
+
+Q: Why is the test accuracy lower than validation accuracy?
+A: Validation was used for decisions (early stopping, learning-rate
+   reduction), so it is slightly optimistic. The test set was never used, so
+   its 85.1 % is the honest estimate. A 1.4-point gap is small → good
+   generalization.
+
+Q: Which classes are hardest and why?
+A: Cat, dog and bird: animals change pose, look alike and are blurry at
+   32x32. Cat vs dog alone accounts for 243 errors.
+
+Q: Can a model reach 100 % on CIFAR-10?
+A: No: the dataset contains some mislabelled images (label noise) and
+   ambiguous classes (pickup: truck or automobile?).
+
+Q: Why does the model predict wrong classes with 100 % confidence?
+A: Neural networks are often overconfident: softmax probabilities are not
+   perfectly calibrated, so a high probability does not guarantee a correct
+   prediction.
