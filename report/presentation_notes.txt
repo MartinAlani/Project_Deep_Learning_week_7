@@ -371,13 +371,23 @@ SLIDE 22 — Final test results: custom CNN vs EfficientNetB0
 | Macro F1-score         | 85.07 %    | 95.49 %                     |
 | Errors (of 10,000)     | 1,489      | 449  (3.3x fewer)           |
 | Parameters             | 0.55 M     | 4.06 M                      |
-| Model file size        | [TO FILL]  | [TO FILL]                   |
-| Training time          | 14.0 min   | [TO FILL]                   |
-| Prediction speed       | [TO FILL]  | 1.92 ms / image             |
+| Model file size        | 6.8 MB     | 80.9 MB (*)                 |
+| Training time          | 14.0 min   | 32.1 min (stage 1 + 2)      |
+| Prediction speed       | 0.19 ms    | 1.92 ms / image             |
+
+(*) the .keras file includes the Adam optimizer state; the weights alone are
+    ~16 MB. The deployment export (Phase 5) drops the optimizer.
 
 - +10.4 points of accuracy; validation (~95.5 %) predicted the test score
   almost exactly → excellent generalization.
 - For reference, human accuracy on CIFAR-10 is estimated at ~94 %.
+
+Trade-off (accuracy vs efficiency): EfficientNetB0 has 7x more parameters,
+a 12x bigger file, 2.3x longer training and is 10x slower per image.
+It is still the best choice: ~2 ms/image (~500 images/s) is imperceptible to
+an app user, the size is easy to serve, and it makes 3.3x fewer errors.
+The custom CNN would only win on very constrained devices (smartwatch,
+microcontroller) or at massive scale with a tiny compute budget.
 
 --------------------------------------------------------------------------------
 SLIDE 23 — Where does transfer learning help most?
@@ -418,7 +428,9 @@ SLIDE 24 — Best model and why
 Best model: EfficientNetB0 fine-tuned on CIFAR-10
 1. Accuracy: 95.5 % on the test set (+10.4 points over the custom CNN)
 2. Consistency: every class above 0.89 F1, no weak classes
-3. Efficiency: only 4 M parameters (6x fewer than ResNet50V2), ~2 ms/image
+3. Efficiency: only 4 M parameters (6x fewer than ResNet50V2), ~2 ms/image;
+   slower and bigger than the custom CNN, but the accuracy gain far outweighs
+   a difference users cannot notice
 4. Deployment-ready: small file, fast inference, preprocessing inside the
    model → this is the model deployed in the Flask app
 
@@ -545,3 +557,9 @@ Q: Why choose the winner on validation and not on test?
 A: Choosing a model is a decision; making it on the test set would leak
    information and make the final score optimistic. The test set was used
    only once, for the final evaluation.
+
+Q: Your best model is 10x slower and 12x bigger than your CNN. Is it worth it?
+A: Yes for this app: 1.9 ms per image is imperceptible and 81 MB (16 MB of
+   weights) is easy to serve, while errors drop 3.3x. On a very constrained
+   device, or at huge scale with a small budget, the custom CNN could be the
+   better trade-off.
