@@ -1,6 +1,6 @@
 ================================================================================
  PRESENTATION NOTES — Image Classification with CNNs (CIFAR-10)
- Status: covers Phases 0-3 (data, custom CNN, evaluation), with real results.
+ Status: covers Phases 0-4 (data, custom CNN, evaluation, transfer learning).
 ================================================================================
 
 --------------------------------------------------------------------------------
@@ -282,11 +282,150 @@ Looking at the most confident mistakes:
 Visual: grid of most confident mistakes (notebook 03, section 9).
 
 --------------------------------------------------------------------------------
-SLIDES 18+ — (to be added)
+SLIDE 18 — What is transfer learning?
 --------------------------------------------------------------------------------
-- Phase 4: transfer learning — models tried, chosen model and why
-- Model comparison table and best model
-- Phase 5: Flask app demo
+Reuse a network already trained on a huge dataset (ImageNet: 1.4 M images,
+1,000 classes) instead of learning from scratch.
+- Early/middle layers learn universal features (edges, textures, shapes,
+  object parts) → we keep them.
+- The last layer is specific to ImageNet's 1,000 classes → removed
+  (include_top=False) and replaced by a new Dense(10) + softmax head.
+
+Two stages:
+1. Feature extraction: pre-trained base FROZEN, only the new head is trained
+   (fast; 12,810 trainable params out of 4.06 M for EfficientNetB0).
+2. Fine-tuning: unfreeze the base and keep training with a 100x smaller
+   learning rate (1e-5) to adapt the features without destroying them.
+   BatchNorm layers stay frozen.
+
+Technical details:
+- CIFAR-10 images upscaled 32x32 → 128x128 (Resizing layer inside the model)
+- Each model's own input scaling inside the model → the app sends raw images
+- Mixed precision (float16) on the T4 GPU → ~2x faster training
+
+--------------------------------------------------------------------------------
+SLIDE 19 — Which pre-trained models? (choice and justification)
+--------------------------------------------------------------------------------
+| Model          | Params (no top) | ImageNet top-1 | Why try it                 |
+|----------------|-----------------|----------------|----------------------------|
+| MobileNetV2    | 2.3 M           | ~72 %          | Lightweight, fast, mobile  |
+| ResNet50V2     | 23.6 M          | ~76 %          | Classic deep residual net  |
+| EfficientNetB0 | 4.0 M           | ~77 %          | Best accuracy per parameter|
+
+- ResNet50V2 instead of ResNet50: same family, simple [-1, 1] input scaling
+  that fits cleanly inside the model.
+- VGG16 discarded on purpose: 138 M parameters (26x EfficientNetB0), slow on a
+  free GPU, >500 MB file (bad for deployment), lower ImageNet accuracy.
+
+--------------------------------------------------------------------------------
+SLIDE 20 — Stage 1 results: feature extraction (frozen base)
+--------------------------------------------------------------------------------
+Identical conditions: same data split, head, Adam 1e-3, max 10 epochs,
+early stopping (patience 3). Winner chosen on VALIDATION accuracy.
+
+| Model          | Val accuracy | Epochs | Training time |
+|----------------|--------------|--------|---------------|
+| EfficientNetB0 | 88.62 %      | 10     | [TO FILL] min |
+| MobileNetV2    | 83.70 %      | 7      | [TO FILL] min |
+| ResNet50V2     | 82.82 %      | 7      | [TO FILL] min |
+| (custom CNN)   | (86.48 %)    | (54)   | (14.0 min)    |
+
+Insights:
+- EfficientNetB0 wins clearly: 87 % already after the 1st epoch (the custom
+  CNN needed ~40 epochs) and still improving at epoch 10.
+- Surprise: frozen MobileNetV2 and ResNet50V2 stay BELOW the custom CNN.
+  ImageNet features come from sharp 224x224 photos; upscaled 32x32 images are
+  still blurry (domain gap), and a frozen base cannot adapt. The custom CNN
+  was trained from scratch on 32x32 images → "tailor-made".
+- EfficientNetB0 beats ResNet50V2 with 6x fewer parameters.
+
+Visual: results/tl_stage1_comparison.png
+
+--------------------------------------------------------------------------------
+SLIDE 21 — Stage 2: fine-tuning EfficientNetB0
+--------------------------------------------------------------------------------
+- Whole base unfrozen (except BatchNorm), Adam lr 1e-5, 15 epochs,
+  early stopping (patience 4), ReduceLROnPlateau, checkpoint on Drive
+- Validation accuracy: 88.6 % (frozen) → ~95.5 % (fine-tuned)
+- Validation loss: ~0.34 → ~0.13 (custom CNN: 0.41)
+
+What the curves show:
+- Right after unfreezing, validation accuracy jumps from ~88.5 % to ~93 % in
+  ONE epoch: the network adapts its ImageNet features to blurry, upscaled
+  CIFAR-10 images.
+- Then a smooth, stable climb thanks to the tiny learning rate.
+- Train accuracy catches up with validation at the end (~95.5 % both): the
+  model has learned almost everything it can; training longer would start
+  overfitting. All 15 epochs were used; gains flattened after epoch ~20.
+
+Visual: results/tl_efficientnet_b0_learning_curves.png
+
+--------------------------------------------------------------------------------
+SLIDE 22 — Final test results: custom CNN vs EfficientNetB0
+--------------------------------------------------------------------------------
+| Metric (test set)      | Custom CNN | EfficientNetB0 (fine-tuned) |
+|------------------------|------------|-----------------------------|
+| Accuracy               | 85.11 %    | 95.51 %                     |
+| Macro precision        | 85.31 %    | 95.51 %                     |
+| Macro recall           | 85.11 %    | 95.51 %                     |
+| Macro F1-score         | 85.07 %    | 95.49 %                     |
+| Errors (of 10,000)     | 1,489      | 449  (3.3x fewer)           |
+| Parameters             | 0.55 M     | 4.06 M                      |
+| Model file size        | [TO FILL]  | [TO FILL]                   |
+| Training time          | 14.0 min   | [TO FILL]                   |
+| Prediction speed       | [TO FILL]  | 1.92 ms / image             |
+
+- +10.4 points of accuracy; validation (~95.5 %) predicted the test score
+  almost exactly → excellent generalization.
+- For reference, human accuracy on CIFAR-10 is estimated at ~94 %.
+
+--------------------------------------------------------------------------------
+SLIDE 23 — Where does transfer learning help most?
+--------------------------------------------------------------------------------
+| Class      | Custom CNN F1 | EfficientNetB0 F1 | Improvement |
+|------------|---------------|-------------------|-------------|
+| cat        | 0.706         | 0.896             | +0.190      |
+| bird       | 0.788         | 0.965             | +0.176      |
+| dog        | 0.780         | 0.916             | +0.136      |
+| deer       | 0.825         | 0.956             | +0.130      |
+| frog       | 0.847         | 0.969             | +0.122      |
+| airplane   | 0.871         | 0.964             | +0.093      |
+| horse      | 0.895         | 0.966             | +0.071      |
+| ship       | 0.928         | 0.979             | +0.050      |
+| truck      | 0.922         | 0.967             | +0.045      |
+| automobile | 0.944         | 0.973             | +0.028      |
+
+Insights:
+- Every class improves, and the HARDEST classes improve the most (animals:
+  cat, bird, dog, deer). ImageNet has hundreds of animal classes (120 dog
+  breeds alone), so the network already knew how to tell animals apart.
+- All classes are now above 0.89 F1: much more uniform than the custom CNN
+  (0.71 → 0.94).
+- The "frog fallback" disappeared: frog precision 0.768 → 0.948
+  (cat→frog 9 % → 2 %, deer→frog 8 % → 1 %).
+- Background bias fixed: ship→airplane 5 % → 1 %, bird→airplane 4 % → 1 %.
+- Still hardest: cat vs dog (cat→dog 11 % → 7 %, dog→cat 13 % → 5 %) — cut by
+  more than half, but some 32x32 cats and dogs are ambiguous even for humans.
+- Truck→automobile barely changes (4 % → 3 %): the ambiguity (pickups, vans,
+  SUVs) is in the dataset itself.
+
+Visuals: results/cnn_vs_transfer_f1_per_class.png,
+         results/tl_efficientnet_b0_confusion_matrix.png
+
+--------------------------------------------------------------------------------
+SLIDE 24 — Best model and why
+--------------------------------------------------------------------------------
+Best model: EfficientNetB0 fine-tuned on CIFAR-10
+1. Accuracy: 95.5 % on the test set (+10.4 points over the custom CNN)
+2. Consistency: every class above 0.89 F1, no weak classes
+3. Efficiency: only 4 M parameters (6x fewer than ResNet50V2), ~2 ms/image
+4. Deployment-ready: small file, fast inference, preprocessing inside the
+   model → this is the model deployed in the Flask app
+
+--------------------------------------------------------------------------------
+SLIDES 25+ — (to be added)
+--------------------------------------------------------------------------------
+- Phase 5: Flask app demo (+ TF Serving)
 - Insights & lessons learned, conclusion
 
 ================================================================================
@@ -367,3 +506,42 @@ Q: Why does the model predict wrong classes with 100 % confidence?
 A: Neural networks are often overconfident: softmax probabilities are not
    perfectly calibrated, so a high probability does not guarantee a correct
    prediction.
+
+Q: What is transfer learning and why does it work?
+A: Reusing a network trained on a large dataset (ImageNet). Its early and
+   middle layers learned universal visual features (edges, textures, shapes)
+   that are useful for any image task, so we only need to adapt the end.
+
+Q: Why freeze the base first and fine-tune later?
+A: With a randomly initialized head, large gradients would flow into the
+   base and damage the pre-trained weights. First we train the head on top of
+   frozen features; once it is reasonable, we unfreeze and adjust everything
+   gently with a tiny learning rate.
+
+Q: Why such a small learning rate for fine-tuning?
+A: The base already holds valuable knowledge. Large steps would destroy it;
+   small steps (1e-5, 100x smaller) only fine-adjust it to CIFAR-10.
+
+Q: Why keep BatchNorm layers frozen during fine-tuning?
+A: Their statistics were computed on millions of ImageNet images. Updating
+   them with small batches of a different dataset makes training unstable.
+
+Q: Why upscale the images to 128x128?
+A: ImageNet models expect large inputs; at 32x32 their many pooling steps
+   would shrink the image to almost nothing. Upscaling adds no information,
+   but lets the network process the image at the scale it was trained on.
+
+Q: Why did frozen MobileNetV2 and ResNet50V2 perform worse than your CNN?
+A: Domain gap: their features were learned on sharp high-resolution photos,
+   while our images are blurry upscaled 32x32 images. Frozen, they cannot
+   adapt; the custom CNN was trained directly on 32x32 images.
+
+Q: Why EfficientNetB0 and not VGG16?
+A: VGG16 has 138 M parameters (26x more), is slow to train on a free GPU,
+   produces a >500 MB model and has lower ImageNet accuracy. EfficientNetB0
+   gives the best accuracy per parameter and is ideal for deployment.
+
+Q: Why choose the winner on validation and not on test?
+A: Choosing a model is a decision; making it on the test set would leak
+   information and make the final score optimistic. The test set was used
+   only once, for the final evaluation.

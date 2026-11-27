@@ -32,8 +32,8 @@
 - [x] Phase 1 — `01_data_preprocessing.ipynb` (user ran it in Colab successfully, up to the augmentation cells)
 - [x] Phase 2 — `02_custom_cnn.ipynb` run in Colab: val_acc 0.8648, val_loss 0.4134, best epoch 44/54 (early stop), 14.0 min on T4, 552k params. Saved to Drive: custom_cnn.keras, custom_cnn_history.json, custom_cnn_learning_curves.png
 - [x] Phase 3 — `03_evaluation.ipynb` run: test acc 0.8511 (val 0.8648), test macro P/R/F1 0.8531/0.8511/0.8507. Best F1: automobile .944, ship .928, truck .922; worst: cat .706, dog .780, bird .788. Top confusion dog<->cat (129+114). Insights: vehicles > animals, frog = fallback (high recall, low precision), background bias (ship/bird->airplane), label noise, overconfidence. Saved to Drive `results/`
-- [~] Phase 4 — `04_transfer_learning.ipynb` written & tested: MobileNetV2 / ResNet50V2 / EfficientNetB0 frozen (IMG_SIZE 128, 10 epochs, lr 1e-3), best by val acc → fine-tune whole base except BatchNorm (lr 1e-5, 15 epochs). Mixed precision on GPU. RETRAIN=False skips models already on Drive. Saves tl_<name>_stage1/finetuned.keras + JSONs, transfer_learning_evaluation.json. Waiting for the user's results ← **current**
-- [ ] Phase 5 — Flask app (multi-image upload, per-class probabilities) + TF Serving bonus, hosting
+- [x] Phase 4 — `04_transfer_learning.ipynb` run. Stage 1 val acc: EfficientNetB0 0.8862 (10 ep), MobileNetV2 0.8370 (7 ep), ResNet50V2 0.8282 (7 ep). Fine-tuned EfficientNetB0: val ~0.955 (15 ep, no early stop), TEST acc 0.9551, macro P/R/F1 0.9551/0.9551/0.9549, 1.92 ms/image. Biggest F1 gains: cat +.19, bird +.176, dog +.136. Best model = EfficientNetB0 fine-tuned → `models/tl_efficientnet_b0_finetuned.keras` (deploy this). Still missing from user: section 9 table (file sizes, training minutes, CNN ms/image) → [TO FILL] in slides 20/22
+- [ ] Phase 5 — Flask app (multi-image upload, per-class probabilities) + TF Serving bonus, hosting ← **next**
 - [ ] Phase 6 — PDF report, PPT presentation, test_images/ (5-10 images)
-- [~] `report/presentation_notes.txt` — slide-by-slide speaker notes + Q&A, covers Phases 0-3 with real results (slides 1-17); extend after each phase
+- [~] `report/presentation_notes.txt` — slide-by-slide speaker notes + Q&A, covers Phases 0-4 (slides 1-24); extend after each phase
 - [ ] Before submission: delete this `CLAUDE.md` file (user request)
