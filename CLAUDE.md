@@ -30,7 +30,7 @@
 - [x] Phase 0 — Project structure, requirements.txt, README
 - [x] Phase 1 — `01_data_preprocessing.ipynb` (user ran it in Colab successfully, up to the augmentation cells)
 - [x] Phase 2 — `02_custom_cnn.ipynb` run in Colab: val_acc 0.8648, val_loss 0.4134, best epoch 44/54 (early stop), 14.0 min on T4, 552k params. Saved to Drive: custom_cnn.keras, custom_cnn_history.json, custom_cnn_learning_curves.png
-- [ ] Phase 3 — Evaluation (accuracy, precision, recall, F1, confusion matrix) ← **next**
+- [~] Phase 3 — `03_evaluation.ipynb` written & tested (loads custom_cnn.keras from Drive; saves figures + custom_cnn_evaluation.json to Drive `results/`). Waiting for the user to run it and share test acc, per-class report, confusion matrix ← **current**
 - [ ] Phase 4 — Transfer learning (try 2-3 pre-trained models, justify the choice)
 - [ ] Phase 5 — Flask app (multi-image upload, per-class probabilities) + TF Serving bonus, hosting
 - [ ] Phase 6 — PDF report, PPT presentation, test_images/ (5-10 images)

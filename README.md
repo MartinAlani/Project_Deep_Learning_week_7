@@ -14,7 +14,7 @@ on pre-trained models, and deploy the best model as a Flask web app.
 |---|----------|---------|------|
 | 1 | [`01_data_preprocessing.ipynb`](notebooks/01_data_preprocessing.ipynb) | Data loading, exploration, train/val/test split, normalization, augmentation, `tf.data` pipeline | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MartinAlani/project_deep_learning_week_7/blob/main/notebooks/01_data_preprocessing.ipynb) |
 | 2 | [`02_custom_cnn.ipynb`](notebooks/02_custom_cnn.ipynb) | Custom VGG-style CNN, training with Adam + early stopping, learning curves | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MartinAlani/project_deep_learning_week_7/blob/main/notebooks/02_custom_cnn.ipynb) |
-| 3 | Evaluation | Accuracy, precision, recall, F1, confusion matrix | *coming soon* |
+| 3 | [`03_evaluation.ipynb`](notebooks/03_evaluation.ipynb) | Test-set evaluation: accuracy, precision, recall, F1, confusion matrix, error analysis | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MartinAlani/project_deep_learning_week_7/blob/main/notebooks/03_evaluation.ipynb) |
 | 4 | Transfer learning | Comparison of pre-trained models | *coming soon* |
 
 ## Project structure
